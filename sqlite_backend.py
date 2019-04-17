@@ -97,3 +97,80 @@ def insert_many(conn, items, table_name):
     except IntegrityError as e:
         print('{}: at least one in {} was already stored in table "{}"'
             .format(e, [x['name'] for x in items], table_name))
+
+
+def tuple_to_dict(mytuple):
+    mydict = dict()
+    mydict['id'] = mytuple[0]
+    mydict['name'] = mytuple[1]
+    mydict['price'] = mytuple[2]
+    mydict['quantity'] = mytuple[3]
+    return mydict
+
+
+@connect
+def select_one(conn, item_name, table_name):
+    table_name = scrub(table_name)
+    item_name = scrub(item_name)
+    sql = 'SELECT * FROM {} WHERE name="{}"'.format(table_name, item_name)
+    c = conn.execute(sql)
+    result = c.fetchone()
+    if result is not None:
+        return tuple_to_dict(result)
+    else:
+        raise mvc_exc.ItemNotStored(
+            'Can\'t read "{}" because it\'s not stored in table "{}"'
+            .format(item_name, table_name)
+
+
+@connect
+def select_all(conn, table_name):
+    table_name = scrub(table_name)
+    sql = 'SELECT * from {}'.format(table_name)
+    c = conn.execute(sql)
+    results = c.fetchall()
+    return list(map(lambda x: tuple_to_dict(x), results))
+
+
+@connect
+def update_one(conn, name, price, quantity, table_name):
+    table_name = scrub(table_name)
+    sql_check = 'SELECT EXISTS(SELECT 1 FROM {} WHERE name=? LIMIT 1)'\
+        .format(table_name)
+    sql_update = 'UPDATE {} SET price=?, quantity=?, WHERE name=?'\
+        .format(table_name)
+    c = conn.execute(sql_check, (name,))
+    result = c.fetchone()
+    if result[0]:
+        c.execute(sql_update, (price, quantity, name))
+        conn.commit()
+    else:
+        raise mvc_exc.ItemNotStored(
+            'Can\'t update "{}" because it\'s not stored in table "{}"'
+            .format(name, table_name))
+
+
+@connect
+def delete_one(conn, name, table_name):
+    table_name = scrub(table_name)
+    sql_check = 'SELECT EXISTS(SELECT 1 FROM {} WHERE name=? LIMIT 1)'\
+        .format(table_name)
+    sql_delete = 'DELETE FROM {} WHERE name=?'.format(table_name)
+    c = conn.execute(sql_check, (name,))
+    result = c.fetchone()
+    if result[0]:
+        c.execute(sql_delete, (name,))
+        conn.commit()
+    else:
+        raise mvc_exc.ItemNotStored(
+            'Can\'t delete "{}" because it\'s not stored in table "{}"'
+            .format(name, table_name))
+
+
+# test code
+def main():
+    pass
+
+
+if __name__ == '__main__':
+    main()
