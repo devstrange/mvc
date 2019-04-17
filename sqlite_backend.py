@@ -1,5 +1,5 @@
 import sqlite3
-from sqlite3 import OperationalError, IntegrityError, ProgramingError
+from sqlite3 import OperationalError, IntegrityError, ProgrammingError
 
 
 DB_name = 'myDB'
@@ -32,7 +32,7 @@ def connect(func):
         try:
             conn.execute(
                 'SELECT name FROM sqlite_temp_master WHERE type="table";')
-        except (AttributeError, ProgramingError):
+        except (AttributeError, ProgrammingError):
             conn = connect_to_db(DB_name)
         return func(conn, *args, **kwargs)
     return inner_func
@@ -120,7 +120,7 @@ def select_one(conn, item_name, table_name):
     else:
         raise mvc_exc.ItemNotStored(
             'Can\'t read "{}" because it\'s not stored in table "{}"'
-            .format(item_name, table_name)
+            .format(item_name, table_name))
 
 
 @connect
@@ -137,7 +137,7 @@ def update_one(conn, name, price, quantity, table_name):
     table_name = scrub(table_name)
     sql_check = 'SELECT EXISTS(SELECT 1 FROM {} WHERE name=? LIMIT 1)'\
         .format(table_name)
-    sql_update = 'UPDATE {} SET price=?, quantity=?, WHERE name=?'\
+    sql_update = 'UPDATE {} SET price=?, quantity=? WHERE name=?'\
         .format(table_name)
     c = conn.execute(sql_check, (name,))
     result = c.fetchone()
@@ -169,7 +169,39 @@ def delete_one(conn, name, table_name):
 
 # test code
 def main():
-    pass
+    
+    table_name = 'items'
+    conn = connect_to_db()
+
+    create_table(conn, table_name)
+
+    my_items = [
+        {'name': 'bread', 'price': 0.5, 'quantity': 20},
+        {'name': 'milk', 'price': 1.0, 'quantity': 10},
+        {'name': 'wine', 'price': 10.0, 'quantity': 5},
+    ]
+
+    # CREATE
+    insert_many(conn, my_items, table_name='items')
+    insert_one(conn, 'beer', price=2.0, quantity=5, table_name='items')
+
+    # READ
+    print('SELECT milk')
+    print(select_one(conn, 'milk', table_name='items'))
+    print('SELECT all')
+    print(select_all(conn, table_name='items'))
+
+    # UPDATE
+    print('UPDATE bread, SELECT bread')
+    update_one(conn, 'bread', price=1.5, quantity=5, table_name='items')
+    print(select_one(conn, 'bread', table_name='items'))
+
+    # DELETE
+    print('DELETE beer, SELECT all')
+    delete_one(conn, 'beer', table_name='items')
+    print(select_all(conn, table_name='items'))
+
+    conn.close()
 
 
 if __name__ == '__main__':
