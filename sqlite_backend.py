@@ -35,6 +35,7 @@ def connect(func):
         except (AttributeError, ProgramingError):
             conn = connect_to_db(DB_name)
         return func(conn, *args, **kwargs)
+    return inner_func
 
 
 def disconnect_from_db(db=None, conn=None):
