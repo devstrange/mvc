@@ -68,3 +68,32 @@ def scrub(input_string):
     str
     """
     return ''.join(k for k in input_string if k.isalnum())
+
+
+@connect
+def insert_one(conn, name, price, quantity, table_name):
+    table_name = scrub(table_name)
+    sql = "INSERT INTO {} ('name', 'price', 'quantity') VALUES (?, ?, ?)"\
+        .format(table_name)
+    try:
+        conn.execute(sql, (name, price, quantity))
+        conn.commit()
+    except IntegrityError as e:
+        raise mvc_exc.ItemAlreadyStored(
+            '{}: "{}" already stored in table "{}"'.format(e, name, table_name))
+
+
+@connect
+def insert_many(conn, items, table_name):
+    table_name = scrub(table_name)
+    sql = "INSERT INTO {} ('name', 'price', 'quantity') VALUES (?, ?, ?)"\
+        .format(table_name)
+    entries = list()
+    for x in items:
+        entries.append((x['name'], x['price'], x['quantity']))
+    try:
+        conn.executemany(sql, entries)
+        conn.commit()
+    except IntegrityError as e:
+        print('{}: at least one in {} was already stored in table "{}"'
+            .format(e, [x['name'] for x in items], table_name))
