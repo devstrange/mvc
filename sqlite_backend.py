@@ -1,5 +1,6 @@
 import sqlite3
 from sqlite3 import OperationalError, IntegrityError, ProgrammingError
+import mvc_exceptions as mvc_exc
 
 
 DB_name = 'myDB'

@@ -1,5 +1,6 @@
 # model_view_controller.py
 import basic_backend
+import sqlite_backend
 import mvc_exceptions as mvc_exc
 
 
@@ -37,6 +38,53 @@ class ModelBasic(object):
 
     def delete_item(self, name):
         basic_backend.delete_item(name)
+
+
+# Model
+# use sqlite3
+class ModelSQLite(object):
+
+    def __init__(self, application_items):
+        self._item_type = 'product'
+        self._connection = sqlite_backend.connect_to_db(sqlite_backend.DB_name)
+        sqlite_backend.create_table(self.connection, self.item_type)
+        self.create_items(application_items)
+
+    @property
+    def connection(self):
+        return self._connection
+
+    @property
+    def item_type(self):
+        return self._item_type
+
+    @item_type.setter
+    def item_type(self, new_item_type):
+        self._item_type = new_item_type
+
+    def create_item(self, name, price, quantity):
+        sqlite_backend.insert_one(
+            self.connection, name, price, quantity, table_name=self.item_type)
+
+    def create_items(self, items):
+        sqlite_backend.insert_many(
+            self.connection, items, table_name=self.item_type)
+
+    def read_item(self, name):
+        return sqlite_backend.select_one(
+            self.connection, name, table_name=self.item_type)
+
+    def read_items(self):
+        return sqlite_backend.select_all(
+            self.connection, table_name=self.item_type)
+
+    def update_item(self, name, price, quantity):
+        sqlite_backend.update_one(
+            self.connection, name, price, quantity, table_name=self.item_type)
+
+    def delete_item(self, name):
+        sqlite_backend.delete_one(
+            self.connection, name, table_name=self.item_type)
 
 
 # view
@@ -186,17 +234,28 @@ def main():
         {'name': 'wine', 'price': 10.0, 'quantity': 5},
     ]
 
-    c = Controller(ModelBasic(my_items), View())
+#    c = Controller(ModelBasic(my_items), View())
+    c = Controller(ModelSQLite(my_items), View())
     c.show_items()
     c.show_items(bullet_points=True)
     c.show_item('chocolate')
     c.show_item('bread')
+
     c.insert_item('bread', price=1.0, quantity=5)
     c.insert_item('chocolate', price=2.0, quantity=10)
     c.show_item('chocolate')
+
     c.update_item('milk', price=1.2, quantity=20)
     c.update_item('ice cream', price=3.5, quantity=20)
+
+    c.delete_item('fish')
     c.delete_item('bread')
+
+    if type(c.model) is ModelSQLite:
+        sqlite_backend.disconnect_from_db(
+            sqlite_backend.DB_name, c.model.connection)
+
+        c.show_items()
 
 
 if __name__ == '__main__':
